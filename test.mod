@@ -1,2 +1,3 @@
 MODULE Test;
+	IMPORT SYSTEM;
 END Test.

@@ -5,7 +5,7 @@
 
 #include "err.h"
 
-enum class Token_Type { end_of_file, identifier, module, end, semicolon, period };
+enum class Token_Type { end_of_file, identifier, module, end, semicolon, period, comma, colon, becomes, import };
 
 class Tokenizer {
 		std::istream &in_;
@@ -49,6 +49,14 @@ class Tokenizer {
 				case EOF: return set_token(Token_Type::end_of_file);
 				case ';': get(); return set_token(Token_Type::semicolon);
 				case '.': get(); return set_token(Token_Type::period);
+				case ':': {
+					get();
+					if (ch_ == '=') {
+						get(); return set_token(Token_Type::becomes);
+					}
+					return set_token(Token_Type::colon);
+				}
+				case ',': get(); return set_token(Token_Type::comma);
 				default:
 					  err("token", "unknown char '"s + static_cast<char>(ch_) + "'"s);
 					  throw 10;
