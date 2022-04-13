@@ -1,8 +1,8 @@
-#include "token.h"
+#include "tok.h"
+#include "mod.h"
 
 int main(int argc, const char *argv[]) {
 	Tokenizer tok(std::cin);
-	while (tok.type() != Token_Type::end_of_file) {
-		tok.next();
-	}
+	read_module(tok);
+	assert_tok(Token_Type::end_of_file, tok, "main", "data after MODULE");
 }

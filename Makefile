@@ -8,7 +8,7 @@ CXXFLAGS += -g -Wall -std=c++17
 
 tests: $(APP)
 	@echo "run tests"
-	@./oi Tests.Run
+	@./oi < test.mod
 
 include $(wildcard deps/*.dep)
 
