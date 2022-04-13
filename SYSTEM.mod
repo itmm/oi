@@ -1,2 +1,2 @@
-MODULE System;
-END System.
+MODULE SYSTEM;
+END SYSTEM.

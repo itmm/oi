@@ -48,6 +48,9 @@ static void read_import(Module *mod, Tokenizer &tok) {
 		std::ifstream in { (module_name + ".mod").c_str() };
 		Tokenizer t2 { in };
 		imp = read_module(t2);
+		if (imp->name() != module_name) {
+			err("read_import", "module '"s + module_name + ".mod' has wrong name "s + imp->name());
+		}
 	}
 	mod->add_import(assigned_name, imp);
 }
