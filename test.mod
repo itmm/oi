@@ -1,3 +1,3 @@
 MODULE Test;
-	IMPORT SYSTEM;
+	IMPORT Texts, Oberon;
 END Test.
