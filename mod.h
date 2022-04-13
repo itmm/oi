@@ -2,5 +2,7 @@
 
 #include "tok.h"
 
-void read_module(Tokenizer &tok);
+class Module;
+
+Module *read_module(Tokenizer &tok);
 
