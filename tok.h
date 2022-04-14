@@ -5,12 +5,17 @@
 
 #include "err.h"
 
-enum class Token_Type { end_of_file, identifier, module, end, semicolon, period, comma, colon, becomes, import };
+enum class Token_Type {
+       	end_of_file, identifier, module_kw, end_kw, semicolon, period, comma,
+       	colon, becomes, import_kw, const_kw, type_kw, procedure_kw, var_kw,
+       	begin_kw, asterisk, equals, plus, minus, integer
+};
 
 class Tokenizer {
 		std::istream &in_;
 		int ch_;
 		std::string ident_;
+		int integer_;
 
 		Token_Type type_ { Token_Type::end_of_file };
 
@@ -33,10 +38,18 @@ class Tokenizer {
 
 		Token_Type type() const { return type_; }
 		std::string ident() const { return ident_; }
+		int integer() const { return integer_; }
 
 		Token_Type next() {
 			while (ch_ != EOF && ch_ <= ' ') { get(); }
-			if (isalpha(ch_)) {
+			if (isdigit(ch_)) {
+				integer_ = 0;
+				while (isdigit(ch_)) {
+					integer_ = integer_ * 10 + (ch_ - '0');
+					get();
+				}
+				return set_token(Token_Type::integer);
+			} else if (isalpha(ch_)) {
 				ident_.clear();
 				while (isalnum(ch_)) { ident_ += static_cast<char>(ch_); get(); }
 				auto got { keywords_.find(ident_) };
@@ -57,6 +70,10 @@ class Tokenizer {
 					return set_token(Token_Type::colon);
 				}
 				case ',': get(); return set_token(Token_Type::comma);
+				case '*': get(); return set_token(Token_Type::asterisk);
+				case '=': get(); return set_token(Token_Type::equals);
+				case '+': get(); return set_token(Token_Type::plus);
+				case '-': get(); return set_token(Token_Type::minus);
 				default:
 					  err("token", "unknown char '"s + static_cast<char>(ch_) + "'"s);
 					  throw 10;
