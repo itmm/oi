@@ -73,22 +73,18 @@ static Ident_Def read_ident_def(Tokenizer &tok) {
 	return { name, exported };
 }
 
+template<typename TYPE, typename BASE> class Concrete_Value: public BASE {
+		const TYPE value_;
+	public:
+		Concrete_Value(TYPE v): value_ { v } { }
+		TYPE value() const { return value_; }
+};
 
 class Numeric_Value: public Value { };
-
-class Int_Value: public Numeric_Value {
-		int value_;
-	public:
-		Int_Value(int v): value_ { v } { }
-		int value() const { return value_; }
-};
-
-class Real_Value: public Numeric_Value {
-		double value_;
-	public:
-		Real_Value(double v): value_ { v } { }
-		double value() const { return value_; }
-};
+using Int_Value = Concrete_Value<int, Numeric_Value>;
+using Real_Value = Concrete_Value<double, Numeric_Value>;
+using Bool_Value = Concrete_Value<bool, Value>;
+using String_Value = Concrete_Value<std::string, Value>;
 
 std::unique_ptr<Value> perform_const_int_op(std::unique_ptr<Int_Value> &&first, Token_Type op, std::unique_ptr<Int_Value> &&second) {
 	err("const_int_op", "not implemented yet");
@@ -137,6 +133,14 @@ std::unique_ptr<Value> read_const_factor(Module *mod, Tokenizer &tok) {
 		auto result { std::make_unique<Real_Value>(tok.real()) };
 		tok.next();
 		return result;
+	}
+	if (tok.type() == Token_Type::true_kw) {
+		tok.next();
+		return std::make_unique<Bool_Value>(true);
+	}
+	if (tok.type() == Token_Type::false_kw) {
+		tok.next();
+		return std::make_unique<Bool_Value>(false);
 	}
 	if (tok.type() == Token_Type::identifier) {
 		auto got { mod->get_const(tok.ident()) };
