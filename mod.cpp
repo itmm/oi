@@ -12,6 +12,8 @@ class Module {
 		const std::string name_;
 		std::map<std::string, Module *> imports_;
 		static std::map<std::string, Module *> all_modules_;
+		std::map<std::string, std::unique_ptr<Value>> constants_;
+
 	public:
 		Module(std::string name): name_ { name } {
 			all_modules_.emplace(name_, this);
@@ -28,8 +30,14 @@ class Module {
 			auto got { all_modules_.find(name) };
 			return got != all_modules_.end() ? got->second : nullptr;
 		}
+		Value *get_const(const std::string &name) {
+			auto got { constants_.find(name) };
+			return got != constants_.end() ? got->second.get() : nullptr;
+		}
 		void add_const(const std::string &name, std::unique_ptr<Value> value, bool exported) {
-			// TODO
+			if (! get_const(name)) {
+				constants_[name] = std::move(value);
+			} else { err("Module", "redefinition of constant"); }
 		}
 };
 
@@ -102,11 +110,26 @@ std::unique_ptr<Value> perform_const_op(std::unique_ptr<Value> &&first, Token_Ty
 	return nullptr;
 }
 
+std::unique_ptr<Value> clone_value(Value *v) {
+	if (auto i { dynamic_cast<Int_Value *>(v) }) {
+		return std::make_unique<Int_Value>(i->value());
+	}
+	err("clone_value", "wrong value type");
+	return nullptr;
+}
+
 std::unique_ptr<Value> read_const_factor(Module *mod, Tokenizer &tok) {
 	if (tok.type() == Token_Type::integer) {
 		auto result { std::make_unique<Int_Value>(tok.integer()) };
 		tok.next();
 		return result;
+	}
+	if (tok.type() == Token_Type::identifier) {
+		auto got { mod->get_const(tok.ident()) };
+		if (got) {
+			tok.next();
+			return clone_value(got);
+		} else { err("const_factor", "identifier not constant"); }
 	}
 	err("const_factor", "unknown token");
 	return nullptr;
