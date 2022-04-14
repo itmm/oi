@@ -74,11 +74,20 @@ static Ident_Def read_ident_def(Tokenizer &tok) {
 }
 
 
-class Int_Value: public Value {
+class Numeric_Value: public Value { };
+
+class Int_Value: public Numeric_Value {
 		int value_;
 	public:
 		Int_Value(int v): value_ { v } { }
 		int value() const { return value_; }
+};
+
+class Real_Value: public Numeric_Value {
+		double value_;
+	public:
+		Real_Value(double v): value_ { v } { }
+		double value() const { return value_; }
 };
 
 std::unique_ptr<Value> perform_const_int_op(std::unique_ptr<Int_Value> &&first, Token_Type op, std::unique_ptr<Int_Value> &&second) {
@@ -124,6 +133,11 @@ std::unique_ptr<Value> read_const_factor(Module *mod, Tokenizer &tok) {
 		tok.next();
 		return result;
 	}
+	if (tok.type() == Token_Type::real) {
+		auto result { std::make_unique<Real_Value>(tok.real()) };
+		tok.next();
+		return result;
+	}
 	if (tok.type() == Token_Type::identifier) {
 		auto got { mod->get_const(tok.ident()) };
 		if (got) {
@@ -142,9 +156,7 @@ std::unique_ptr<Value> read_const_term(Module *mod, Tokenizer &tok) {
 }
 
 bool is_numeric(Value *v) {
-	return v && (
-		dynamic_cast<Int_Value *>(v)
-	);
+	return v && dynamic_cast<Numeric_Value *>(v);
 }
 
 std::unique_ptr<Value> read_simple_const_expression(Module *mod, Tokenizer &tok) {
