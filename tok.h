@@ -9,7 +9,8 @@ enum class Token_Type {
        	end_of_file, identifier, module_kw, end_kw, semicolon, period, comma,
        	colon, becomes, import_kw, const_kw, type_kw, procedure_kw, var_kw,
        	begin_kw, asterisk, equals, plus, minus, integer, real, true_kw,
-	false_kw, nil_kw
+	false_kw, nil_kw, or_kw, div, and_sym, div_kw, mod_kw, lparen,
+	rparen
 };
 
 class Tokenizer {
@@ -40,6 +41,7 @@ class Tokenizer {
 		Token_Type get_integer();
 		Token_Type get_number();
 		Token_Type get_ident();
+		void read_comment();
 
 		static std::map<std::string, Token_Type> keywords_;
 

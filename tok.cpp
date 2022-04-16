@@ -3,12 +3,15 @@
 std::map<std::string, Token_Type> Tokenizer::keywords_ {
 	{ "BEGIN", Token_Type::begin_kw },
 	{ "CONST", Token_Type::const_kw },
+	{ "DIV", Token_Type::div_kw },
 	{ "END", Token_Type::end_kw },
 	{ "FALSE", Token_Type::false_kw },
 	{ "IMPORT", Token_Type::import_kw },
+	{ "MOD", Token_Type::mod_kw },
 	{ "MODULE", Token_Type::module_kw },
 	{ "NIL", Token_Type::nil_kw },
 	{ "PROCEDURE", Token_Type::procedure_kw },
+	{ "OR", Token_Type::or_kw },
 	{ "TRUE", Token_Type::true_kw },
 	{ "TYPE", Token_Type::type_kw },
 	{ "VAR", Token_Type::var_kw }
@@ -116,6 +119,18 @@ Token_Type Tokenizer::get_ident() {
 	return set_token(Token_Type::identifier);
 }
 
+void Tokenizer::read_comment() {
+	for (;;) {
+		if (ch_ == '(') {
+			get();
+			if (ch_ == '*') { read_comment(); }
+		} else if (ch_ == '*') {
+			get();
+			if (ch_ == ')') { get(); break; }
+		} else { get(); }
+	}
+}
+
 Token_Type Tokenizer::next() {
 	while (ch_ != EOF && ch_ <= ' ') { get(); }
 	if (isalnum(ch_)) {
@@ -136,6 +151,17 @@ Token_Type Tokenizer::next() {
 		case '=': return get_and_set_token(Token_Type::equals);
 		case '+': return get_and_set_token(Token_Type::plus);
 		case '-': return get_and_set_token(Token_Type::minus);
+		case '/': return get_and_set_token(Token_Type::div);
+		case '&': return get_and_set_token(Token_Type::and_sym);
+		case '(': {
+			get();
+			if (ch_ == '*') {
+				read_comment();
+				return next();
+			}
+			return set_token(Token_Type::lparen);
+		}
+		case ')': return get_and_set_token(Token_Type::rparen);
 		default:
 			  err("token", "unknown char '"s + static_cast<char>(ch_) + "'"s);
 			  throw 10;
