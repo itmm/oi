@@ -1,20 +1,17 @@
 #include "mod.h"
+#include "const.h"
 
 #include <map>
 #include <memory>
-
-class Value {
-	public:
-		virtual ~Value() { }
-};
 
 class Module {
 		const std::string name_;
 		std::map<std::string, Module *> imports_;
 		static std::map<std::string, Module *> all_modules_;
-		std::map<std::string, std::unique_ptr<Value>> constants_;
 
 	public:
+		Const::Mapping constants;
+
 		Module(std::string name): name_ { name } {
 			all_modules_.emplace(name_, this);
 		}
@@ -30,199 +27,17 @@ class Module {
 			auto got { all_modules_.find(name) };
 			return got != all_modules_.end() ? got->second : nullptr;
 		}
-		Value *get_const(const std::string &name) {
-			auto got { constants_.find(name) };
-			return got != constants_.end() ? got->second.get() : nullptr;
-		}
-		void add_const(const std::string &name, std::unique_ptr<Value> value, bool exported) {
-			if (! get_const(name)) {
-				constants_[name] = std::move(value);
-			} else { err("Module", "redefinition of constant"); }
-		}
 };
 
 std::map<std::string, Module *> Module::all_modules_;
 
 #include <fstream>
 
-static bool is_const_declaration_start(Tokenizer &tok) {
-	switch (tok.type()) {
-		case Token_Type::type_kw:
-		case Token_Type::var_kw:
-		case Token_Type::procedure_kw:
-		case Token_Type::begin_kw:
-		case Token_Type::end_kw:
-			return false;
-		default:
-			return true;
-	}
-}
-
-struct Ident_Def {
-	const std::string ident;
-	bool exported;
-	Ident_Def(const std::string &i, bool e) : ident { i }, exported { e } { }
-};
-
-static Ident_Def read_ident_def(Tokenizer &tok) {
-	assert_tok(Token_Type::identifier, tok, "read_ident_def", "name expected");
-	auto name { tok.ident() };
-	tok.next();
-	bool exported { tok.type() == Token_Type::asterisk };
-	if (exported) { tok.next(); }
-	return { name, exported };
-}
-
-template<typename TYPE, typename BASE> class Concrete_Value: public BASE {
-		const TYPE value_;
-	public:
-		Concrete_Value(TYPE v): value_ { v } { }
-		TYPE value() const { return value_; }
-};
-
-class Numeric_Value: public Value { };
-using Int_Value = Concrete_Value<int, Numeric_Value>;
-using Real_Value = Concrete_Value<double, Numeric_Value>;
-using Bool_Value = Concrete_Value<bool, Value>;
-using String_Value = Concrete_Value<std::string, Value>;
-
-std::unique_ptr<Value> perform_const_int_op(std::unique_ptr<Int_Value> &&first, Token_Type op, std::unique_ptr<Int_Value> &&second) {
-	err("const_int_op", "not implemented yet");
-	return nullptr;
-}
-
-template<typename TO, typename FROM>
-inline std::unique_ptr<TO> unique_cast(std::unique_ptr<FROM> from) {
-	auto tmp { dynamic_cast<TO *>(from.get()) };
-	if (tmp) {
-		std::unique_ptr<TO> result;
-		from.release();
-		result.reset(tmp);
-		return result;
-	} else { return nullptr; }
-}
-
-std::unique_ptr<Value> perform_const_op(std::unique_ptr<Value> &&first, Token_Type op, std::unique_ptr<Value> &&second) {
-	auto first_int { dynamic_cast<Int_Value *>(first.get()) };
-	auto second_int { dynamic_cast<Int_Value *>(second.get()) };
-	if (first_int && second_int) {
-	       	return perform_const_int_op(
-			unique_cast<Int_Value>(std::move(first)), op,
-		       	unique_cast<Int_Value>(std::move(second))
-		);
-       	}
-	err("const op", "arguments are of wrong type");
-	return nullptr;
-}
-
-std::unique_ptr<Value> clone_value(Value *v) {
-	if (auto i { dynamic_cast<Int_Value *>(v) }) {
-		return std::make_unique<Int_Value>(i->value());
-	}
-	err("clone_value", "wrong value type");
-	return nullptr;
-}
-
-std::unique_ptr<Value> read_const_factor(Module *mod, Tokenizer &tok) {
-	if (tok.type() == Token_Type::integer) {
-		auto result { std::make_unique<Int_Value>(tok.integer()) };
-		tok.next();
-		return result;
-	}
-	if (tok.type() == Token_Type::real) {
-		auto result { std::make_unique<Real_Value>(tok.real()) };
-		tok.next();
-		return result;
-	}
-	if (tok.type() == Token_Type::true_kw) {
-		tok.next();
-		return std::make_unique<Bool_Value>(true);
-	}
-	if (tok.type() == Token_Type::false_kw) {
-		tok.next();
-		return std::make_unique<Bool_Value>(false);
-	}
-	if (tok.type() == Token_Type::identifier) {
-		auto got { mod->get_const(tok.ident()) };
-		if (got) {
-			tok.next();
-			return clone_value(got);
-		} else { err("const_factor", "identifier not constant"); }
-	}
-	err("const_factor", "unknown token");
-	return nullptr;
-}
-
-std::unique_ptr<Value> read_const_term(Module *mod, Tokenizer &tok) {
-	auto cur { read_const_factor(mod, tok) };
-	// TODO
-	return cur;
-}
-
-bool is_numeric(Value *v) {
-	return v && dynamic_cast<Numeric_Value *>(v);
-}
-
-std::unique_ptr<Value> read_simple_const_expression(Module *mod, Tokenizer &tok) {
-	bool positive { false };
-	bool negative { false };
-
-	if (tok.type() == Token_Type::plus) {
-		positive = true;
-		tok.next();
-	} else if (tok.type() == Token_Type::minus) {
-		negative = true;
-		tok.next();
-	}
-
-	auto cur { read_const_term(mod, tok) };
-	while (tok.type() == Token_Type::plus || tok.type() == Token_Type::minus) { // TODO
-		auto op { tok.type() };
-		tok.next();
-		auto nxt { read_const_term(mod, tok) };
-		cur = perform_const_op(std::move(cur), op, std::move(nxt));
-	}
-	if (positive) {
-		if (! is_numeric(cur.get())) {
-			err("read_const", "'+' without numeric");
-			return nullptr;
-		}
-		return cur;
-	}
-	if (negative) {
-		if (! is_numeric(cur.get())) {
-			err("read_const", "'-' without numeric");
-			return nullptr;
-		}
-		if (auto c { dynamic_cast<Int_Value *>(cur.get()) }) {
-			return std::make_unique<Int_Value>(-c->value());
-		}
-		err("read_const", "unknown numeric type");
-		return nullptr;
-	}
-	return cur;
-
-}
-
-std::unique_ptr<Value> read_const_expression(Module *mod, Tokenizer &tok) {
-	auto first { read_simple_const_expression(mod, tok) };
-	return first;
-	// TODO relational
-}
-
-static void read_const_declaration(Module *mod, Tokenizer &tok) {
-	auto id { read_ident_def(tok) };
-	assert_next_tok(Token_Type::equals, tok, "reod_const_declaration", "'=' expected");
-
-	auto value { read_const_expression(mod, tok) };
-	mod->add_const(id.ident, std::move(value), id.exported);
-}
-
 static void read_declaration_sequence(Module *mod, Tokenizer &tok) {
 	if (tok.type() == Token_Type::const_kw) {
 		tok.next();
-		while (is_const_declaration_start(tok)) {
-			read_const_declaration(mod, tok);
+		while (Const::is_declaration_start(tok)) {
+			Const::read_declaration(mod->constants, tok);
 			assert_next_tok(Token_Type::semicolon, tok, "read_declaration", "no ';' after const declaration");
 		}
 	}
