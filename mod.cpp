@@ -1,53 +1,54 @@
 #include "mod.h"
 #include "const.h"
+#include "statement.h"
+#include "mapping.h"
+#include "obj.h"
 
 #include <map>
 #include <memory>
 
-class Module {
+class Module: public Obj {
 		const std::string name_;
-		std::map<std::string, Module *> imports_;
-		static std::map<std::string, Module *> all_modules_;
+		static std::map<std::string, std::shared_ptr<Module>> all_modules_;
 
 	public:
-		Const::Mapping constants;
+		Module(std::string name): name_ { name } { }
 
-		Module(std::string name): name_ { name } {
-			all_modules_.emplace(name_, this);
-		}
+		Mapping mapping;
 
 		const std::string &name() const { return name_; }
-		bool has_import(const std::string &name) {
-			return imports_.find(name) != imports_.end();
-		}
-		void add_import(const std::string &name, Module *mod) {
-			imports_[name] = mod;
-		}
-		static Module *find(const std::string &name) {
+		
+		static std::shared_ptr<Module> find(const std::string &name) {
 			auto got { all_modules_.find(name) };
 			return got != all_modules_.end() ? got->second : nullptr;
 		}
+
+		static std::shared_ptr<Module> create(const std::string &name) {
+			if (find(name)) { err("create_module", "duplicates"); return nullptr; }
+			auto result { std::make_shared<Module>(name) };
+			all_modules_.emplace(name, result);
+			return result;
+		}
 };
 
-std::map<std::string, Module *> Module::all_modules_;
+std::map<std::string, std::shared_ptr<Module>> Module::all_modules_;
 
 #include <fstream>
 
-static void read_declaration_sequence(Module *mod, Tokenizer &tok) {
+static void read_declaration_sequence(Module &mod, Tokenizer &tok) {
 	if (tok.type() == Token_Type::const_kw) {
 		tok.next();
 		while (Const::is_declaration_start(tok)) {
-			Const::read_declaration(mod->constants, tok);
+			Const::read_declaration(mod.mapping, tok);
 			assert_next_tok(Token_Type::semicolon, tok, "read_declaration", "no ';' after const declaration");
 		}
 	}
-
 }
 
-static void read_import(Module *mod, Tokenizer &tok) {
+static void read_import(Module &mod, Tokenizer &tok) {
 	assert_tok(Token_Type::identifier, tok, "read_import", "module name expected");
 	auto assigned_name { tok.ident() };
-	if (mod->has_import(assigned_name)) {
+	if (mod.mapping.has(assigned_name)) {
 		err("read_import", "double import of name '"s + assigned_name + "'"s);
 	}
 	std::string module_name;
@@ -59,7 +60,7 @@ static void read_import(Module *mod, Tokenizer &tok) {
 	} else {
 		module_name = assigned_name;
 	}
-	Module *imp { Module::find(module_name) };
+	auto imp { Module::find(module_name) };
 	if (! imp) {
 		std::ifstream in { (module_name + ".mod").c_str() };
 		Tokenizer t2 { in };
@@ -68,10 +69,10 @@ static void read_import(Module *mod, Tokenizer &tok) {
 			err("read_import", "module '"s + module_name + ".mod' has wrong name "s + imp->name());
 		}
 	}
-	mod->add_import(assigned_name, imp);
+	mod.mapping.add(assigned_name, imp, false);
 }
 
-static void read_import_list(Module *mod, Tokenizer &tok) {
+static void read_import_list(Module &mod, Tokenizer &tok) {
 	if (tok.type() != Token_Type::import_kw) { return; }
 	tok.next();
 	read_import(mod, tok);
@@ -82,14 +83,28 @@ static void read_import_list(Module *mod, Tokenizer &tok) {
 	assert_next_tok(Token_Type::semicolon, tok, "read_import_list", "';' expected");
 }
 
-Module *read_module(Tokenizer &tok) {
+static void read_statement_sequence(Module &mod, Tokenizer &tok) {
+	Statement::read(tok);
+	while (tok.type() == Token_Type::semicolon) {
+		tok.next();
+		Statement::read(tok);
+	}
+}
+
+std::shared_ptr<Module> read_module(Tokenizer &tok) {
 	assert_next_tok(Token_Type::module_kw, tok, "read_module", "MODULE expected");
 	assert_tok(Token_Type::identifier, tok, "read_module", "MODULE name expected");
-	auto mod { new Module { tok.ident() } };
+	auto mod { Module::create(tok.ident()) };
+	if (! mod) { err("read_module", "can't create"); return nullptr; }
 	tok.next();
 	assert_next_tok(Token_Type::semicolon, tok, "read_module", "no ';' after module name");
-	read_import_list(mod, tok);
-	read_declaration_sequence(mod, tok);
+	read_import_list(*mod, tok);
+	read_declaration_sequence(*mod, tok);
+
+	if (tok.type() == Token_Type::begin_kw) {
+		tok.next();
+		read_statement_sequence(*mod, tok);
+	}
 
 	assert_next_tok(Token_Type::end_kw, tok, "read_module", "END expected");
 	assert_tok(Token_Type::identifier, tok, "read_module", "MODULE name after END expected");

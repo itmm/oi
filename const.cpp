@@ -11,6 +11,7 @@ namespace Const {
 			case Token_Type::procedure_kw:
 			case Token_Type::begin_kw:
 			case Token_Type::end_kw:
+			case Token_Type::end_of_file:
 				return false;
 			default:
 				return true;
@@ -52,18 +53,7 @@ namespace Const {
 		}
 	}
 
-	template<typename TO, typename FROM>
-	inline std::unique_ptr<TO> unique_cast(std::unique_ptr<FROM> from) {
-		auto tmp { dynamic_cast<TO *>(from.get()) };
-		if (tmp) {
-			std::unique_ptr<TO> result;
-			from.release();
-			result.reset(tmp);
-			return result;
-		} else { return nullptr; }
-	}
-
-	static std::unique_ptr<Value> perform_op(std::unique_ptr<Value> &&first, Token_Type op, std::unique_ptr<Value> &&second) {
+	static std::shared_ptr<Value> perform_op(std::shared_ptr<Value> first, Token_Type op, std::shared_ptr<Value> second) {
 		auto first_int { dynamic_cast<Int_Value *>(first.get()) };
 		auto second_int { dynamic_cast<Int_Value *>(second.get()) };
 		if (first_int && second_int) {
@@ -92,26 +82,9 @@ namespace Const {
 		return nullptr;
 	}
 
-	static std::unique_ptr<Value> clone_value(Value *v) {
-		if (auto i { dynamic_cast<Int_Value *>(v) }) {
-			return std::make_unique<Int_Value>(i->value());
-		}
-		if (auto r { dynamic_cast<Real_Value *>(v) }) {
-			return std::make_unique<Real_Value>(r->value());
-		}
-		if (auto b { dynamic_cast<Bool_Value *>(v) }) {
-			return std::make_unique<Bool_Value>(b->value());
-		}
-		if (auto s { dynamic_cast<String_Value *>(v) }) {
-			return std::make_unique<String_Value>(s->value());
-		}
-		err("clone_value", "wrong value type");
-		return nullptr;
-	}
+	static std::shared_ptr<Value> read_expression(const Mapping &mapping, Tokenizer &tok);
 
-	static std::unique_ptr<Value> read_expression(const Mapping &mapping, Tokenizer &tok);
-
-	static std::unique_ptr<Value> read_factor(const Mapping &mapping, Tokenizer &tok) {
+	static std::shared_ptr<Value> read_factor(const Mapping &mapping, Tokenizer &tok) {
 		if (tok.type() == Token_Type::integer) {
 			auto result { std::make_unique<Int_Value>(tok.integer()) };
 			tok.next();
@@ -123,7 +96,6 @@ namespace Const {
 			return result;
 		}
 
-		// TODO: char constant
 		// TODO: string
 		// TODO: NIL
 		// TODO: set
@@ -148,9 +120,9 @@ namespace Const {
 
 		if (tok.type() == Token_Type::identifier) {
 			auto got { mapping.get(tok.ident(), false) };
-			if (got) {
+			if (dynamic_cast<Value *>(got.get())) {
 				tok.next();
-				return clone_value(got);
+				return std::dynamic_pointer_cast<Value>(got);
 			} else { err("const_factor", "identifier not constant"); }
 			// TODO: function
 		}
@@ -158,7 +130,7 @@ namespace Const {
 		return nullptr;
 	}
 
-	static std::unique_ptr<Value> read_term(const Mapping &mapping, Tokenizer &tok) {
+	static std::shared_ptr<Value> read_term(const Mapping &mapping, Tokenizer &tok) {
 		auto cur { read_factor(mapping, tok) };
 
 		while (tok.type() == Token_Type::asterisk ||
@@ -170,7 +142,7 @@ namespace Const {
 			auto op { tok.type() };
 			tok.next();
 			auto nxt { read_factor(mapping, tok) };
-			cur = perform_op(std::move(cur), op, std::move(nxt));
+			cur = perform_op(cur, op, nxt);
 		}
 		return cur;
 	}
@@ -179,7 +151,7 @@ namespace Const {
 		return v && dynamic_cast<Numeric_Value *>(v);
 	}
 
-	static std::unique_ptr<Value> read_simple_expression(const Mapping &mapping, Tokenizer &tok) {
+	static std::shared_ptr<Value> read_simple_expression(const Mapping &mapping, Tokenizer &tok) {
 		bool positive { false };
 		bool negative { false };
 
@@ -196,7 +168,7 @@ namespace Const {
 			auto op { tok.type() };
 			tok.next();
 			auto nxt { read_term(mapping, tok) };
-			cur = perform_op(std::move(cur), op, std::move(nxt));
+			cur = perform_op(cur, op, nxt);
 		}
 		if (positive) {
 			if (! is_numeric(cur.get())) {
@@ -220,7 +192,7 @@ namespace Const {
 
 	}
 
-	static std::unique_ptr<Value> read_expression(const Mapping &mapping, Tokenizer &tok) {
+	static std::shared_ptr<Value> read_expression(const Mapping &mapping, Tokenizer &tok) {
 		auto first { read_simple_expression(mapping, tok) };
 		return first;
 		// TODO relational
@@ -236,19 +208,6 @@ namespace Const {
 		assert_next_tok(Token_Type::equals, tok, "read_const_declaration", "'=' expected");
 
 		auto value { read_expression(mapping, tok) };
-		mapping.add(id.ident, std::move(value), id.exported);
-	}
-
-	void Mapping::add(const std::string &name, std::unique_ptr<Value> value, bool exported) {
-		values_[name] = std::move(value);
-		if (exported) { exports_.insert(name); }
-	}
-
-	Value *Mapping::get(const std::string &name, bool exported_only) const {
-		auto got { values_.find(name) };
-		if (got == values_.end() || (exported_only && exports_.find(name) == exports_.end())) {
-			return nullptr;
-		}
-		return got->second.get();
+		mapping.add(id.ident, value, id.exported);
 	}
 }

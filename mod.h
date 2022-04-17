@@ -1,8 +1,10 @@
 #pragma once
 
+#include <memory>
+
 #include "tok.h"
 
 class Module;
 
-Module *read_module(Tokenizer &tok);
+std::shared_ptr<Module> read_module(Tokenizer &tok);
 
