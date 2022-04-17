@@ -39,8 +39,8 @@ std::map<std::string, std::shared_ptr<Module>> Module::all_modules_;
 static void read_declaration_sequence(Module &mod, Tokenizer &tok) {
 	if (tok.type() == Token_Type::const_kw) {
 		tok.next();
-		while (Const::is_declaration_start(tok)) {
-			Const::read_declaration(mod.mapping, tok);
+		while (Const::Value::is_start(tok)) {
+			Const::Value::read(mod.mapping, tok);
 			assert_next_tok(Token_Type::semicolon, tok, "read_declaration", "no ';' after const declaration");
 		}
 	}
@@ -96,7 +96,7 @@ std::shared_ptr<Module> read_module(Tokenizer &tok) {
 
 	if (tok.type() == Token_Type::begin_kw) {
 		tok.next();
-		mod->init = Statement::List::read(tok);
+		mod->init = Statement::List::read(mod->mapping, tok);
 	}
 
 	assert_next_tok(Token_Type::end_kw, tok, "read_module", "END expected");

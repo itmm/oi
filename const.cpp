@@ -4,7 +4,7 @@
 
 namespace Const {
 
-	bool is_declaration_start(Tokenizer &tok) {
+	bool Value::is_start(Tokenizer &tok) {
 		switch (tok.type()) {
 			case Token_Type::type_kw:
 			case Token_Type::var_kw:
@@ -164,12 +164,6 @@ namespace Const {
 		}
 
 		auto cur { read_term(mapping, tok) };
-		while (tok.type() == Token_Type::plus || tok.type() == Token_Type::minus || tok.type() == Token_Type::or_kw) {
-			auto op { tok.type() };
-			tok.next();
-			auto nxt { read_term(mapping, tok) };
-			cur = perform_op(cur, op, nxt);
-		}
 		if (positive) {
 			if (! is_numeric(cur.get())) {
 				err("read_const", "'+' without numeric");
@@ -185,8 +179,18 @@ namespace Const {
 			if (auto c { dynamic_cast<Integer *>(cur.get()) }) {
 				return std::make_shared<Integer>(-c->value());
 			}
+			if (auto c { dynamic_cast<Real *>(cur.get()) }) {
+				return std::make_shared<Real>(-c->value());
+			}
 			err("read_const", "unknown numeric type");
 			return nullptr;
+		}
+
+		while (tok.type() == Token_Type::plus || tok.type() == Token_Type::minus || tok.type() == Token_Type::or_kw) {
+			auto op { tok.type() };
+			tok.next();
+			auto nxt { read_term(mapping, tok) };
+			cur = perform_op(cur, op, nxt);
 		}
 		return cur;
 
@@ -198,7 +202,7 @@ namespace Const {
 		// TODO relational
 	}
 
-	void read_declaration(Mapping &mapping, Tokenizer &tok) {
+	void Value::read(Mapping &mapping, Tokenizer &tok) {
 		auto id { read_ident_def(tok) };
 		auto got { mapping.get(id.ident, false) };
 		if (got) {

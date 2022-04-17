@@ -10,7 +10,11 @@
 #include "mapping.h"
 
 namespace Const {
-	class Value: public Expression::Expression { };
+	class Value: public Expression::Expression {
+		public:
+			static bool is_start(Tokenizer &tok);
+			static void read(Mapping &mapping, Tokenizer &tok);
+	};
 
 	template<typename TYPE, typename BASE> class Concrete: public BASE {
 			const TYPE value_;
@@ -24,7 +28,4 @@ namespace Const {
 	using Real = Concrete<double, Numeric>;
 	using Bool = Concrete<bool, Value>;
 	using String = Concrete<std::string, Value>;
-
-	bool is_declaration_start(Tokenizer &tok);
-	void read_declaration(Mapping &mapping, Tokenizer &tok);
 }
