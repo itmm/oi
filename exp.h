@@ -6,11 +6,14 @@
 #include <string>
 
 #include "tok.h"
-#include "exp.h"
+#include "obj.h"
 #include "mapping.h"
 
-namespace Const {
-	class Value: public Expression::Expression { };
+namespace Expression {
+	class Expression: public Obj {
+		public:
+			static std::shared_ptr<Expression> read(Tokenizer &tok);
+	};
 
 	template<typename TYPE, typename BASE> class Concrete: public BASE {
 			const TYPE value_;
@@ -19,12 +22,9 @@ namespace Const {
 			TYPE value() const { return value_; }
 	};
 
-	class Numeric: public Value { };
+	class Numeric: public Expression { };
 	using Integer = Concrete<int, Numeric>;
 	using Real = Concrete<double, Numeric>;
-	using Bool = Concrete<bool, Value>;
-	using String = Concrete<std::string, Value>;
-
-	bool is_declaration_start(Tokenizer &tok);
-	void read_declaration(Mapping &mapping, Tokenizer &tok);
+	using Bool = Concrete<bool, Expression>;
+	using String = Concrete<std::string, Expression>;
 }

@@ -4,17 +4,23 @@ std::map<std::string, Token_Type> Tokenizer::keywords_ {
 	{ "BEGIN", Token_Type::begin_kw },
 	{ "CONST", Token_Type::const_kw },
 	{ "DIV", Token_Type::div_kw },
+	{ "DO", Token_Type::do_kw },
+	{ "ELSE", Token_Type::else_kw },
+	{ "ELSIF", Token_Type::elsif_kw },
 	{ "END", Token_Type::end_kw },
 	{ "FALSE", Token_Type::false_kw },
+	{ "IF", Token_Type::if_kw },
 	{ "IMPORT", Token_Type::import_kw },
 	{ "MOD", Token_Type::mod_kw },
 	{ "MODULE", Token_Type::module_kw },
 	{ "NIL", Token_Type::nil_kw },
 	{ "PROCEDURE", Token_Type::procedure_kw },
 	{ "OR", Token_Type::or_kw },
+	{ "THEN", Token_Type::then_kw },
 	{ "TRUE", Token_Type::true_kw },
 	{ "TYPE", Token_Type::type_kw },
-	{ "VAR", Token_Type::var_kw }
+	{ "VAR", Token_Type::var_kw },
+	{ "WHILE", Token_Type::while_kw }
 };
 
 Token_Type Tokenizer::get_real() {

@@ -10,7 +10,7 @@ enum class Token_Type {
        	colon, becomes, import_kw, const_kw, type_kw, procedure_kw, var_kw,
        	begin_kw, asterisk, equals, plus, minus, integer, real, true_kw,
 	false_kw, nil_kw, or_kw, div, and_sym, div_kw, mod_kw, lparen,
-	rparen
+	rparen, if_kw, then_kw, elsif_kw, else_kw, do_kw, while_kw
 };
 
 class Tokenizer {

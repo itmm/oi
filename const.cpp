@@ -54,13 +54,13 @@ namespace Const {
 	}
 
 	static std::shared_ptr<Value> perform_op(std::shared_ptr<Value> first, Token_Type op, std::shared_ptr<Value> second) {
-		auto first_int { dynamic_cast<Int_Value *>(first.get()) };
-		auto second_int { dynamic_cast<Int_Value *>(second.get()) };
+		auto first_int { dynamic_cast<Integer *>(first.get()) };
+		auto second_int { dynamic_cast<Integer *>(second.get()) };
 		if (first_int && second_int) {
-			return std::make_unique<Int_Value>(perform_int_op(first_int->value(), op, second_int->value()));
+			return std::make_shared<Integer>(perform_int_op(first_int->value(), op, second_int->value()));
 		}
-		auto first_real { dynamic_cast<Real_Value *>(first.get()) };
-		auto second_real { dynamic_cast<Real_Value *>(second.get()) };
+		auto first_real { dynamic_cast<Real *>(first.get()) };
+		auto second_real { dynamic_cast<Real *>(second.get()) };
 		if (first_real || second_real) {
 			double a, b;
 			if (! first_real) {
@@ -71,12 +71,12 @@ namespace Const {
 				if (second_int) { b = second_int->value(); }
 				else err("const op", "second number is not real");
 			} else { b = first_real->value(); }
-			return std::make_unique<Real_Value>(perform_real_op(a, op, b));
+			return std::make_shared<Real>(perform_real_op(a, op, b));
 		}
-		auto first_bool { dynamic_cast<Bool_Value *>(first.get()) };
-		auto second_bool { dynamic_cast<Bool_Value *>(second.get()) };
+		auto first_bool { dynamic_cast<Bool *>(first.get()) };
+		auto second_bool { dynamic_cast<Bool *>(second.get()) };
 		if (first_bool && second_bool) {
-			return std::make_unique<Bool_Value>(perform_bool_op(first_bool->value(), op, second_bool->value()));
+			return std::make_shared<Bool>(perform_bool_op(first_bool->value(), op, second_bool->value()));
 		}
 		err("const op", "arguments are of wrong type");
 		return nullptr;
@@ -86,12 +86,12 @@ namespace Const {
 
 	static std::shared_ptr<Value> read_factor(const Mapping &mapping, Tokenizer &tok) {
 		if (tok.type() == Token_Type::integer) {
-			auto result { std::make_unique<Int_Value>(tok.integer()) };
+			auto result { std::make_shared<Integer>(tok.integer()) };
 			tok.next();
 			return result;
 		}
 		if (tok.type() == Token_Type::real) {
-			auto result { std::make_unique<Real_Value>(tok.real()) };
+			auto result { std::make_shared<Real>(tok.real()) };
 			tok.next();
 			return result;
 		}
@@ -103,11 +103,11 @@ namespace Const {
 	
 		if (tok.type() == Token_Type::true_kw) {
 			tok.next();
-			return std::make_unique<Bool_Value>(true);
+			return std::make_shared<Bool>(true);
 		}
 		if (tok.type() == Token_Type::false_kw) {
 			tok.next();
-			return std::make_unique<Bool_Value>(false);
+			return std::make_shared<Bool>(false);
 		}
 		if (tok.type() == Token_Type::lparen) {
 			tok.next();
@@ -148,7 +148,7 @@ namespace Const {
 	}
 
 	static bool is_numeric(Value *v) {
-		return v && dynamic_cast<Numeric_Value *>(v);
+		return v && dynamic_cast<Numeric *>(v);
 	}
 
 	static std::shared_ptr<Value> read_simple_expression(const Mapping &mapping, Tokenizer &tok) {
@@ -182,8 +182,8 @@ namespace Const {
 				err("read_const", "'-' without numeric");
 				return nullptr;
 			}
-			if (auto c { dynamic_cast<Int_Value *>(cur.get()) }) {
-				return std::make_unique<Int_Value>(-c->value());
+			if (auto c { dynamic_cast<Integer *>(cur.get()) }) {
+				return std::make_shared<Integer>(-c->value());
 			}
 			err("read_const", "unknown numeric type");
 			return nullptr;

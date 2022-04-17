@@ -15,6 +15,7 @@ class Module: public Obj {
 		Module(std::string name): name_ { name } { }
 
 		Mapping mapping;
+		std::shared_ptr<Statement::List> init;
 
 		const std::string &name() const { return name_; }
 		
@@ -83,14 +84,6 @@ static void read_import_list(Module &mod, Tokenizer &tok) {
 	assert_next_tok(Token_Type::semicolon, tok, "read_import_list", "';' expected");
 }
 
-static void read_statement_sequence(Module &mod, Tokenizer &tok) {
-	Statement::read(tok);
-	while (tok.type() == Token_Type::semicolon) {
-		tok.next();
-		Statement::read(tok);
-	}
-}
-
 std::shared_ptr<Module> read_module(Tokenizer &tok) {
 	assert_next_tok(Token_Type::module_kw, tok, "read_module", "MODULE expected");
 	assert_tok(Token_Type::identifier, tok, "read_module", "MODULE name expected");
@@ -103,7 +96,7 @@ std::shared_ptr<Module> read_module(Tokenizer &tok) {
 
 	if (tok.type() == Token_Type::begin_kw) {
 		tok.next();
-		read_statement_sequence(*mod, tok);
+		mod->init = Statement::List::read(tok);
 	}
 
 	assert_next_tok(Token_Type::end_kw, tok, "read_module", "END expected");
