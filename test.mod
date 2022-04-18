@@ -10,4 +10,8 @@ MODULE Test;
 		g = f OR TRUE;
 		h = a + b;
 		i = d + d;
+	BEGIN
+		IF TRUE THEN
+			;
+		END
 END Test.

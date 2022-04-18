@@ -97,6 +97,8 @@ std::shared_ptr<Module> read_module(Tokenizer &tok) {
 	if (tok.type() == Token_Type::begin_kw) {
 		tok.next();
 		mod->init = Statement::List::read(mod->mapping, tok);
+		if (! mod->init) { err("read_module", "no init"); }
+		mod->init->eval(mod->mapping);
 	}
 
 	assert_next_tok(Token_Type::end_kw, tok, "read_module", "END expected");

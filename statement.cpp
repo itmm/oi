@@ -6,6 +6,7 @@ namespace Statement {
 	std::shared_ptr<List> List::read(const Mapping &mapping, Tokenizer &tok) {
 		auto me { std::make_shared<List>() };
 		for (;;) {
+			if (tok.type() == Token_Type::end_kw) { break; }
 			auto cur { Statement::read(mapping, tok) };
 			if (! cur) { err("statement_list", "can't read statement"); return nullptr; }
 			me->statements_.push_back(cur);
