@@ -2,12 +2,20 @@
 
 #include <string>
 
+#include "mapping.h"
+#include "mod.h"
 #include "tok.h"
 
 struct Ident_Def {
-	const std::string ident;
+	std::string ident;
 	bool exported;
-	Ident_Def(const std::string &i, bool e) : ident { i }, exported { e } { }
+
+	static Ident_Def read(Tokenizer &tok);
 };
 
-Ident_Def read_ident_def(Tokenizer &tok);
+struct Qual_Ident {
+	std::shared_ptr<Module> mod;
+	std::shared_ptr<Obj> obj;
+
+	static Qual_Ident read(const Mapping &mapping, Tokenizer &tok);
+};

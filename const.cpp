@@ -203,7 +203,7 @@ namespace Const {
 	}
 
 	void Value::read(Mapping &mapping, Tokenizer &tok) {
-		auto id { read_ident_def(tok) };
+		auto id { Ident_Def::read(tok) };
 		auto got { mapping.get(id.ident, false) };
 		if (got) {
 			err("const", "redeclaration of '" + id.ident + "'");

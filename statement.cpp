@@ -1,6 +1,7 @@
 #include "statement.h"
 
 #include "err.h"
+#include "ident.h"
 
 namespace Statement {
 	std::shared_ptr<List> List::read(const Mapping &mapping, Tokenizer &tok) {
@@ -99,9 +100,13 @@ namespace Statement {
 	}
 
 	void While::eval(Mapping &mapping) {
-		while (base_.eval(mapping)) { }
-		for (auto &ei : elsifs_) {
-			while (ei.eval(mapping)) { }
+		for (;;) {
+			if (base_.eval(mapping)) { continue; }
+			bool cont { false };
+			for (auto &ei : elsifs_) {
+				if (ei.eval(mapping)) { cont = true; break; }
+			}
+			if (! cont) { return; }
 		}
 	}
 
@@ -123,6 +128,10 @@ namespace Statement {
 		// TODO: Case Statement
 		// TODO: Repeat Statement
 		// TODO: For Statement
+
+		auto qual_ident { Qual_Ident::read(mapping, tok) };
+
+
 		err("statement", "unknown statement");
 		return nullptr;
 	}
